@@ -90,6 +90,51 @@ func (r *Router) removeUser(u User) {
 }
 
 /*
+meant to be run as a goroutine. Sends all messages
+received over the channel ch to the connected 
+client c
+
+returns only once ch is closed (no more messages to send)
+*/
+func MessageSender(c net.Conn, ch chan Message) {
+	for {
+		m, ok := <-ch
+		if !ok {
+			//channel closed, so client has left.
+			//receiver will have closed connection already
+			return
+		}
+		err := WriteMessage(c, m)
+		if err != nil {
+			fmt.Println(c.RemoteAddr()," WriteMessage: ",err)
+		}
+	}
+}
+
+/*
+meant to be run as a goroutine. Receives messages
+from connected client c and sends them to channel
+ch
+
+returns only once the client has disconnected, and
+signals this to the user by closing the channel ch
+*/
+func MessageReceiver(c net.Conn, ch chan Message) {
+	for {
+		m, err := ReadMessage(c)
+		if err != nil {
+			fmt.Println(c.RemoteAddr()," ReadMessage: ",err)
+			if err.Error() == "EOF" {
+				c.Close()
+				close(ch)
+				return
+			}
+		} else {
+			ch<- *m
+		}
+	}
+}
+/*
 reads a message from Connection c, writing
 to m, returning any errors. The message is
 assumed to have been sent in JSON format

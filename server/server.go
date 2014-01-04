@@ -18,24 +18,27 @@ individual connection.
 For now, just a simple echo server
 */
 func handleConnection(client net.Conn, u chat.User, newmsg chan<- string) {
-	for {
-		m, err := chat.ReadMessage(client)
-		if err != nil {
-			fmt.Println(client.RemoteAddr()," ReadMessage: ",err)
-			if err.Error() == "EOF" {
-				client.Close()
-				close(u.In)
-				return
-			}
-		}
-		newmsg<- u.Name
-		u.In <- *m
+	ch_recv := make(chan chat.Message)
+	ch_send := make(chan chat.Message)
 
-		tmp := <-u.Out
-		m = &tmp
-		err = chat.WriteMessage(client, *m)
-		if err != nil {
-			fmt.Println(client.RemoteAddr()," WriteMessage: ",err)
+	go chat.MessageReceiver(client, ch_recv)
+	go chat.MessageSender(client, ch_send)
+
+	for {
+		select {
+		case m, ok := <-ch_recv:
+			if !ok {
+				//client disconnected, close sender helper and quit
+				close(ch_send)
+				return
+			} else {
+				//new message from client
+				newmsg<- u.Name
+				u.In <- m
+			}
+		case m := <-u.Out:
+			//new message to client
+			ch_send<- m
 		}
 	}
 }
