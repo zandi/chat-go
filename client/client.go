@@ -17,6 +17,31 @@ import (
 	"github.com/zandi/chat-go/chat"
 )
 
+func identify(c net.Conn, username string) {
+	fmt.Println("Identifying...")
+	buf := []byte(username)
+	_, err := c.Write(buf)
+	if err != nil {
+		fmt.Println("Error identifying to server: ",err)
+		c.Close()
+		os.Exit(1)
+	}
+}
+
+/*
+simply prints messages received on ch to
+stdoit 
+*/
+func messagePrinter(ch chan chat.Message) {
+	for {
+		m, ok := <-ch
+		if !ok {
+			return
+		}
+		fmt.Println(m.Source,": ",m.Text)
+	}
+}
+
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Println("Not enough arguments.")
@@ -38,21 +63,18 @@ func main() {
 	}
 	fmt.Println("Connected to ",server.RemoteAddr())
 
-	//identify to server. improve this
-	fmt.Println("Identifying...")
-	buf := []byte(username)
-	_, err = server.Write(buf)
-	if err != nil {
-		fmt.Println("Error identifying to server: ",err)
-		server.Close()
-		os.Exit(1)
-	}
+	identify(server, username)
 
 	fmt.Println("exit by typing '/exit', or sending EOF (Ctrl+D)")
 
 	var msg chat.Message
 	msg.Source = username
 	r := bufio.NewReader(os.Stdin)
+	ch_send := make(chan chat.Message)
+	ch_recv := make(chan chat.Message)
+	go chat.MessageSender(server, ch_send)
+	go chat.MessageReceiver(server, ch_recv)
+	go messagePrinter(ch_recv)
 	for {
 		fmt.Print("> ")
 		textbuf, err := r.ReadString('\n')
@@ -80,18 +102,6 @@ func main() {
 			msg.Text = strings.Join(textslice[1:],"")
 		}
 
-		err = chat.WriteMessage(server, msg)
-		if err != nil {
-			fmt.Println("WriteMessage: ",err)
-		}
-
-		msg, err := chat.ReadMessage(server)
-		if err != nil {
-			fmt.Println("ReadMessage: ",err)
-		} else {
-			fmt.Println(msg.Source,": ",msg.Text)
-		}
+		ch_send<- msg
 	}
-
-	server.Close()
 }
