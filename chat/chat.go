@@ -9,7 +9,6 @@ package chat
 import (
 	"fmt"
 	"net"
-	"time"
 	"encoding/json"
 )
 
@@ -59,12 +58,17 @@ func (r *Router) Route(newuser chan User, newmsg chan string) {
 				r.AddUser(u)
 			case src := <-newmsg:
 				m := <-r.In_chans[src]
-				r.Out_chans[m.Dest]<- m
-				fmt.Println("msg: ",src," -> ",m.Dest,": ",m)
+				if m.Dest == "" {
+					//broadcast to all users
+					//potentially very time-consuming
+					for k := range r.Out_chans {
+						r.Out_chans[k]<- m
+					}
+				} else {
+					r.Out_chans[m.Dest]<- m
+					fmt.Println("msg: ",src," -> ",m.Dest,": ",m.Text)
+				}
 		}
-
-		//just so we don't hog cpu doing nothing
-		time.Sleep(2000 * time.Millisecond)
 	}
 }
 

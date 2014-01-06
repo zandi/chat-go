@@ -38,7 +38,7 @@ func messagePrinter(ch chan chat.Message) {
 		if !ok {
 			return
 		}
-		fmt.Println(m.Source,": ",m.Text)
+		fmt.Println("<",m.Source,"> ",m.Text)
 	}
 }
 
@@ -89,13 +89,11 @@ func main() {
 			os.Exit(0)
 		}
 
-		//todo: if no destination, broadcast
-		//for now: if no destination, echo
 		textslice := strings.Split(textbuf,":")
 		if len(textslice) == 0 {
 			continue
 		} else if len(textslice) == 1 {
-			msg.Dest = msg.Source
+			msg.Dest = ""
 			msg.Text = textslice[0]
 		} else {
 			msg.Dest = textslice[0]
