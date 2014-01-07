@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"github.com/zandi/chat-go/chat"
+	"github.com/zandi/chat-go"
 )
 
 /* called as a goroutine to handle each

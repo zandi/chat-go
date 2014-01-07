@@ -14,7 +14,7 @@ import (
 	"net"
 	"os"
 	"strings"
-	"github.com/zandi/chat-go/chat"
+	"github.com/zandi/chat-go"
 )
 
 func identify(c net.Conn, username string) {
@@ -30,7 +30,7 @@ func identify(c net.Conn, username string) {
 
 /*
 simply prints messages received on ch to
-stdoit 
+stdout 
 */
 func messagePrinter(ch chan chat.Message) {
 	for {
